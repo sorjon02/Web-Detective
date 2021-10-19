@@ -57,6 +57,40 @@ function doTest {
     return $pingtest
 }
 
+# The function IsRoutable takes one input parameter, $addr, and determines if
+# this address is routable or not. If the address is recognized as beeing on
+# the list of officially not routable, allso called private, networks the
+# function will return $false. If it's not on the list of not routable
+# networks, it will return $true.
+Function IsRoutable {
+    Param(
+        [Parameter(Mandatory=$True, ValueFromPipeline=$True)] [String] $addr
+    )
+    # The default is $True, since most networks are routable
+    $retval = $True
+
+    # Now set $retval to $false, if the adress is on the list of not
+    # routable networks.
+    $my_temp = $addr.Split('.')
+    if(10 -eq $my_temp[0]) {
+        # It is the 10.0.0.0 to 10.255.255 reserved range
+        $retval = $False
+    }
+    if( 172 -eq $my_temp[0] ) {
+        if( (16 -le $my_temp[1]) -and (31 -ge $my_temp[1]) ) {
+            # It's in the 172.16.0.0 to 172.31.255.255 reserved range
+            $retval = $false
+        }
+    }
+    if( 192 -eq $my_temp[0] ) {
+        if( (168 -le $my_temp[1]) -and (1 -ge $my_temp[1]) ) {
+            # It's in the 192.168.0.0 to 192.168.255.255 reserved range
+            $retval = $false
+        }
+    }
+    return $retval
+}
+
 Function doBasicTests {
     # Test if this function has been run before
     if(Test-Path -Path .\library\netconfig.ps1 -PathType Leaf){
@@ -74,10 +108,15 @@ Function doBasicTests {
         $retval = "Your own computer does not respond! Check the TCP/IP device drivers."
     }
 
-    # Testing the closest router, usually a router in the owners appartment
-    $my_temp = doTest($global:BasicTestGlobals.myrouter)
-    if( ("" -eq $retval) -and ($false -eq $my_temp) ) {
-        $retval =  "Your router does not respond. Check your cables and the router."
+    # If the computer is on an officially private network, i.e. hidden behind a
+    # firewall, then check the local firewall
+    $my_temp =IsRoutable($global:BasicTestGlobals.myrouter )
+    if($false -eq $my_temp ) {
+        # Testing the closest router, usually a router in the owners appartment
+        $my_temp = doTest($global:BasicTestGlobals.myrouter)
+        if( ("" -eq $retval) -and ($false -eq $my_temp) ) {
+            $retval =  "Your router does not respond. Check your cables and the router."
+        }
     }
 
     # Testing the connection to your ISP's router

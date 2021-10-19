@@ -1,11 +1,11 @@
-# H1 What is WEb Detective?
+# What is WEb Detective?
 
 Web detective is a small program written in Powershell, and it's purpose is to  
 troubleshoot your Internet access. Trouble can originate in many ways, and  
 Web Detective attempts to examine them all: the computer you are sitting at,
 cable or wifi connection to your local router, your ISP's router, and so on.  
 
-# H1 How do I use Web Detective?
+# How do I use Web Detective?
 
 In order to examine your connection to Internet, it's necessary to know where  
 you live. You want to know that you can access computers in the city you live  
@@ -29,7 +29,7 @@ This is as far as the initial version of Web Detective goes. Long distance tests
 are planned, but this reqire a combrehensive database for Internet access,
 and this is the next main task.  
 
-# H1 How is the database designed?
+# How is the database designed?
 
 The database is very simple. In the subdirectory "database" you find one subdirectory  
 for every continent. For every continent you find a directory per nation, and so on.  
