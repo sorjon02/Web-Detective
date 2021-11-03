@@ -220,8 +220,21 @@ Function CreatetButtonBasicTests {
     $retval.Add_Click( { 
         # Inport the functionality created in .\Library\BasicAccess.ps1
         . .\Library\BasicAccess.ps1
-        
-        # Do the basic Intenet access tests and write out any message
+        . .\Library\ISPQueryGUI.ps1
+
+        # If the config file don't exist, then create it
+        if(-not (Test-Path -Path .\library\netconfig.ps1 -PathType Leaf) ){
+            # Open a query window, and ask the user about hes/her ISP
+            $my_temp = GetSelectedPath($global:UIGlobals.CurrentDirLevel)
+            SetPath($my_temp)
+            SetPath($my_temp)
+            $my_DNSServers = CreatePopupWindow
+            
+            # And use the $my_DNSServers list to create the config file
+            createConfigFile($my_DNSServers[2] )
+        }
+
+        # And now, do the basic Intenet access tests and write out any message
         # in the information text box
         $message = doBasicTests
         AddTextInfoBox($message)

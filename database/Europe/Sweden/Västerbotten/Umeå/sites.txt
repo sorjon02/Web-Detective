@@ -1,2 +1,3 @@
 www.umu.se,130.239.141.10
 www.umea.se,193.254.4.30
+www.regionvasterbotten.se,185.80.208.118

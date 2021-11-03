@@ -21,7 +21,10 @@
 # essential network information, and store it as a config file.
 # It will make it possible to run the diagnostics without any network connection
 function CreateConfigFile {
-    "# This is the config flie for nettest.ps1" | Out-File -FilePath .\Library\netconfig.ps1
+    Param(
+        [Parameter(Mandatory=$True, ValueFromPipeline=$True)] [String] $DNSServerList
+    )
+    "# This is the config flie for Web Detective" | Out-File -FilePath .\Library\netconfig.ps1
     # Create a window object to display information to the user.
     "`$global:BasicTestGlobals = [PSCustomObject]@{" | Out-File -FilePath .\Library\netconfig.ps1
     
@@ -38,9 +41,8 @@ function CreateConfigFile {
         $mytemp3 = $mytemp2[7]
         $mytemp1 = $mytemp3.split("[")
         "    myISP = `"" + $mytemp1[1] +"`"" | Out-File -FilePath .\Library\netconfig.ps1 -Append
-        "    # The following two lines should be edited, to reflect your ISP's DNS server IP's" | Out-File -FilePath netconfig.ps1 -Append
-        "    ISPDNS1 = `"89.160.20.18`"" | Out-File -FilePath .\Library\netconfig.ps1 -Append
-        "    ISPDNS2 = `"89.160.20.22`"" | Out-File -FilePath .\Library\netconfig.ps1 -Append
+        "    # The following line is a comma separated list of your ISP's DNS server IP's" | Out-File -FilePath netconfig.ps1 -Append
+        '    ISPDNSList = "' + $DNSServerList + '"' | Out-File -FilePath .\Library\netconfig.ps1 -Append
         "`}" | Out-File -FilePath .\Library\netconfig.ps1 -Append
 }
 
@@ -83,7 +85,7 @@ Function IsRoutable {
         }
     }
     if( 192 -eq $my_temp[0] ) {
-        if( (168 -le $my_temp[1]) -and (1 -ge $my_temp[1]) ) {
+        if( 168 -le $my_temp[1] ) {
             # It's in the 192.168.0.0 to 192.168.255.255 reserved range
             $retval = $false
         }
@@ -125,26 +127,32 @@ Function doBasicTests {
         $retval =  "Your ISP's router don't respond. You have to contact your ISP!"
     }
 
-    # Testing if you can reach your ISP's DNS servers
-    # Cannot use doTest, since it's acceptable if one of two
-    # DNS servers is unavailable
-    $dns1 = Test-Connection -Quiet -ComputerName $global:BasicTestGlobals.ispdns1
-    $dns2 = Test-Connection -Quiet -ComputerName $global:BasicTestGlobals.ispdns2
+    if( "" -eq $retval ) {
+        # Testing if you can reach your ISP's DNS servers
+        # Cannot use doTest, since it's acceptable if one of two
+        # DNS servers is unavailable. It can be a variable number of DNS servers
+        # as well.
+        $temp1 = $global:BasicTestGlobals.ISPDNSList
+        $DNSList = $temp1.split(",")
+        for($i = 0; $i -lt $DNSList.length; $i++){
+            $dnsReply = Test-Connection -Quiet -ComputerName $DNSList[$i]
+            if( ($false -eq $dnsReply) -and ("" -eq $retval) ) {
+                $retval =  "Your ISP's DNS servers are unavailable. You can only use numeric IP addresses for now."
+            } # End if( ($false -eq $dnsReply) -and ("" -eq $retval) )
+        } # End for($i = 0; $i -lt $DNSList.length; $i++)
+    } # End if( "" -eq $retval )
 
-    if( -not ( $dns1 -or $dns2 ) -and  ("" -eq $retval) ) {
-        $retval =  "Your ISP's DNS servers are unavailable. You can only use numeric IP addresses for now."
+    if( "" -eq $retval ) {
+        # Test 2 on DNS, lookup an address.
+        $temp1 = nslookup riksdagen.se
+        $temp2 = $temp1.split([Environment]::NewLine)
+        $temp3 = $temp2[5].trim()
+        if( ("" -eq $retval) -and ("193.11.1.15" -ne $temp3) ) {
+            $retval =  "Attempted to lookup an address but it failed. Your ISP's DNS sytem is not working!"
+        }
+
+        # From here the most important services can be assumed to work. 
+        $retval =  "All tests works as expected, and responces are allso as expected. You apper to have basic contact with Intenet."
     }
-
-    # Test 2 on DNS, lookup an address.
-    $temp1 = nslookup riksdagen.se
-    $temp2 = $temp1.split([Environment]::NewLine)
-    $temp3 = $temp2[5].trim()
-    if( ("" -eq $retval) -and ("193.11.1.15" -ne $temp3) ) {
-        $retval =  "Attempted to lookup an address but it failed. Your ISP's DNS sytem is not working!"
-    }
-
-    # From here the most important services can be assumed to work. 
-    $retval =  "All tests works as expected, and responces are allso as expected. You apper to have basic contact with Intenet."
-
     return $retval
 }
